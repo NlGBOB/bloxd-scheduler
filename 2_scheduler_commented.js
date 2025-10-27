@@ -9,6 +9,12 @@ run = (task, delay, tag) => {
     tasksByTag[tag] = { handle: schedulerNode, next: tasksByTag[tag] };
 };
 
+start = (task) => {
+    const targetTick = currentTick;
+    const schedulerNode = { task, tag: '', next: taskHeads[targetTick] };
+    taskHeads[targetTick] = schedulerNode;
+    tasksByTag[''] = { handle: schedulerNode, next: tasksByTag[''] };
+};
 
 runWhile = (task, conditional, step, tag, onComplete) => {
     const stepRunner = () => {
@@ -19,8 +25,6 @@ runWhile = (task, conditional, step, tag, onComplete) => {
     }
     stepRunner()
 };
-
-
 
 
 repeat = (task, interval, tag) => {
@@ -45,6 +49,7 @@ clearByTag = (tag) => {
     delete tasksByTag[tag];
 };
 
+
 sequence = (tasks, step, tag, onComplete) => {
     let index = 0;
     const runNextJob = () => {
@@ -56,6 +61,7 @@ sequence = (tasks, step, tag, onComplete) => {
     }
     runNextJob();
 };
+
 
 tick = () => {
     while (taskHeads[currentTick]) {
