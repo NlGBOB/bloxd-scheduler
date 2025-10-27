@@ -64,10 +64,10 @@ sequence = (tasks, step, tag, onComplete) => {
 };
 
 tick = () => {
-    for (
-        let currentNode = taskHeads[currentTick];
-        currentNode;
-        currentNode = currentNode.next
-    ) currentNode.task();
+    while (taskHeads[currentTick]) {
+        const headNode = taskHeads[currentTick];
+        headNode.task();
+        taskHeads[currentTick] = headNode.next;
+    }
     delete taskHeads[currentTick++];
 };
