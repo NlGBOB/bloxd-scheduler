@@ -25,6 +25,17 @@ run = (task, delay, tag) => {
     return targetTick;
 };
 
+runWhile = (task, delay, step, tag, onComplete) => {
+    const sequenceStepRunner = () => {
+        if (conditional()) {
+            task();
+            run(sequenceStepRunner, step, tag);
+        } else {
+            run(onComplete, 1, tag);
+        }
+    };
+    run(sequenceStepRunner, delay, tag);
+};
 
 repeat = (task, interval, tag) => {
     const intervalId = nextIntervalId++;
@@ -120,7 +131,6 @@ sequence = (jobs, delay, step, tag, onComplete) => {
             return;
         }
         const taskToRun = jobs[index];
-
         const jobRunner = () => {
             taskToRun();
             run(() => scheduleNextJob(index + 1), step, tag);
