@@ -32,33 +32,26 @@ runWhile = (conditional, task, step, tag, onComplete) => {
 
 repeat = (task, interval, tag) => {
     const handle = { task };
-
     const repeater = () => {
         if (!handle.task) return;
         handle.task();
         run(repeater, interval, tag);
     };
-
     const tagNode = {
         type: 'repeat',
         handle: handle,
         next: tasksByTag[tag]
     };
     tasksByTag[tag] = tagNode;
-
     repeater();
 };
 
 clearByTag = (tag) => {
-    const tagListHead = tasksByTag[tag];
-    if (!tagListHead) { return }
-
     for (
-        let currentTagNode = tagListHead;
+        let currentTagNode = tasksByTag[tag];
         currentTagNode;
         currentTagNode = currentTagNode.next
     ) currentTagNode.handle.task = null;
-
     delete tasksByTag[tag];
 };
 
