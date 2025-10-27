@@ -4,6 +4,7 @@ currentTick = 0;
 
 run = (task, delay, tag) => {
     const targetTick = currentTick + delay;
+
     const schedulerNode = {
         task: task,
         next: taskHeads[targetTick],
@@ -11,7 +12,6 @@ run = (task, delay, tag) => {
     };
     taskHeads[targetTick] = schedulerNode;
     const tagNode = {
-        type: 'run',
         handle: schedulerNode,
         next: tasksByTag[tag]
     };
@@ -19,7 +19,7 @@ run = (task, delay, tag) => {
 };
 
 
-runWhile = (conditional, task, step, tag, onComplete) => {
+runWhile = (task, conditional, step, tag, onComplete) => {
     const stepRunner = () => {
         if (conditional()) {
             task();
@@ -37,34 +37,29 @@ repeat = (task, interval, tag) => {
         handle.task();
         run(repeater, interval, tag);
     };
-    const tagNode = {
-        type: 'repeat',
-        handle: handle,
-        next: tasksByTag[tag]
-    };
-    tasksByTag[tag] = tagNode;
+    tasksByTag[tag] = { handle, next: tasksByTag[tag] }
     repeater();
 };
+
 
 clearByTag = (tag) => {
     for (
         let currentTagNode = tasksByTag[tag];
         currentTagNode;
         currentTagNode = currentTagNode.next
-    ) currentTagNode.handle.task = null;
+    ) currentTagNode.handle.task = () => { };
     delete tasksByTag[tag];
 };
 
-
-sequence = (jobs, step, tag, onComplete) => {
+sequence = (tasks, step, tag, onComplete) => {
     let index = 0;
     const runNextJob = () => {
-        jobs[index]();
-        if (index + 1 < jobs.length) {
+        tasks[index]();
+        if (index + 1 < tasks.length) {
             index++;
             run(runNextJob, step, tag)
         } else run(onComplete, 1, tag)
-    };
+    }
     runNextJob();
 };
 
