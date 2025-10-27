@@ -46,19 +46,7 @@ repeat = (task, interval, tag) => {
         const intervalData = activeIntervals[intervalId];
         if (!intervalData) return;
         intervalData.handle.task();
-        const targetTick = currentTick + interval;
-        const schedulerNode = {
-            task: repeater,
-            next: taskHeads[targetTick],
-            tag: tag
-        };
-        taskHeads[targetTick] = schedulerNode;
-        const tagNode = {
-            type: 'run',
-            handle: schedulerNode,
-            next: tasksByTag[tag]
-        };
-        tasksByTag[tag] = tagNode;
+        run(repeater, interval, tag);
     };
     const intervalTagNode = {
         type: 'repeat',
@@ -68,19 +56,8 @@ repeat = (task, interval, tag) => {
     };
     tasksByTag[tag] = intervalTagNode;
 
-    const firstTargetTick = currentTick + interval;
-    const firstSchedulerNode = {
-        task: repeater,
-        next: taskHeads[firstTargetTick],
-        tag: tag
-    };
-    taskHeads[firstTargetTick] = firstSchedulerNode;
-    const firstTagNode = {
-        type: 'run',
-        handle: firstSchedulerNode,
-        next: tasksByTag[tag]
-    };
-    tasksByTag[tag] = firstTagNode;
+    run(repeater, interval, tag);
+
     return { intervalId };
 };
 
@@ -106,21 +83,7 @@ clearByTag = (tag) => {
         delete tasksByTag[tag];
     };
 
-    const delay = 0;
-    const clearingJobTag = "";
-    const targetTick = currentTick + delay;
-    const schedulerNode = {
-        task: clearingJob,
-        next: taskHeads[targetTick],
-        tag: clearingJobTag
-    };
-    taskHeads[targetTick] = schedulerNode;
-    const tagNode = {
-        type: 'run',
-        handle: schedulerNode,
-        next: tasksByTag[clearingJobTag]
-    };
-    tasksByTag[clearingJobTag] = tagNode;
+    run(clearingJob, 0, "");
 };
 
 

@@ -138,9 +138,6 @@ repeat = (task, interval, tag) => {
     return { intervalId };
 };
 
-/**
- * MODIFIED: Inlined 'run' calls.
- */
 sequence = (jobs, delay, step, tag, onComplete) => {
     const scheduleNextJob = (index) => {
         if (!jobs || index >= jobs.length) {
