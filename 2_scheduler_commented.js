@@ -4,8 +4,15 @@ currentTick = 0;
 
 run = (task, delay, tag) => {
     const targetTick = currentTick + delay;
-    taskHeads[targetTick] = { task, next: taskHeads[targetTick], tag }
-    tasksByTag[tag] = { handle: schedulerNode, next: tasksByTag[tag] };
+
+    const schedulerNode = {
+        task: task,
+        next: taskHeads[targetTick],
+        tag: tag
+    };
+    taskHeads[targetTick] = schedulerNode;
+
+    tasksByTag[tag] = { handle: schedulerNode, next: tasksByTag[tag] }
 };
 
 
