@@ -10,10 +10,8 @@ run = (task, delay, tag) => {
 };
 
 start = (task) => {
-    const targetTick = currentTick;
-    const schedulerNode = { task, tag: '', next: taskHeads[targetTick] };
-    taskHeads[targetTick] = schedulerNode;
-    tasksByTag[''] = { handle: schedulerNode, next: tasksByTag[''] };
+    const schedulerNode = { task, next: taskHeads[currentTick] };
+    taskHeads[currentTick] = schedulerNode;
 };
 
 runWhile = (task, conditional, step, tag, onComplete) => {
