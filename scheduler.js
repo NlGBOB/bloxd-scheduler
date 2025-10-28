@@ -66,6 +66,7 @@ tick = () => {
         if (!node) { return }
         fifo(node, node.next);
         node.task();
+        node.executed = true;
         parent.next = null;
     };
     fifo(sentinel, sentinel.next);
@@ -73,3 +74,6 @@ tick = () => {
     delete taskHeads[currentTick];
     currentTick++;
 };
+
+// This should be included.
+start(() => repeat(() => { for (const t in tasksByTag) { let s = { next: null }, l = s; for (let c = tasksByTag[t]; c; c = c.next)c.handle.executed || (l = l.next = c); l.next = null; s.next ? tasksByTag[t] = s.next : delete tasksByTag[t] } }, 1200, '_garbage_collector'))
