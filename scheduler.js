@@ -61,10 +61,15 @@ sequence = (tasks, step, tag, onComplete) => {
 
 
 tick = () => {
-    while (taskHeads[currentTick]) {
-        const headNode = taskHeads[currentTick];
-        headNode.task();
-        taskHeads[currentTick] = headNode.next;
-    }
-    delete taskHeads[currentTick++];
+    const sentinel = { next: taskHeads[currentTick] };
+    const fifo = (parent, node) => {
+        if (!node) { return }
+        fifo(node, node.next);
+        node.task();
+        parent.next = null;
+    };
+    fifo(sentinel, sentinel.next);
+    taskHeads[currentTick] = sentinel.next;
+    delete taskHeads[currentTick];
+    currentTick++;
 };
