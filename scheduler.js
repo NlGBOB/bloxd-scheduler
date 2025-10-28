@@ -31,11 +31,18 @@ repeat = (task, interval, tag) => {
 
 clearByTag = (tag) => {
     for (const tick in taskHeads) {
+        let sentinel = { next: taskHeads[tick] };
+        let previous = sentinel;
         let node = taskHeads[tick];
+
         while (node) {
-            if (node.tag === tag) node.task = () => { };
+            if (node.tag === tag)
+                previous.next = node.next;
+            else
+                previous = node;
             node = node.next;
         }
+        taskHeads[tick] = sentinel.next;
     }
 };
 
