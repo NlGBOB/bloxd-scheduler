@@ -52,8 +52,8 @@ sequence = (tasks, step, tag, onComplete) => {
     const runNextJob = () => {
         tasks[index]();
         if (index + 1 < tasks.length) {
-            index++;
             run(runNextJob, step, tag)
+            index++;
         } else run(onComplete, 1, tag)
     }
     runNextJob();
