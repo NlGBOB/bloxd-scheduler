@@ -23,7 +23,6 @@ runWhile = (task, conditional, step, tag, onComplete) => {
     stepRunner()
 };
 
-
 repeat = (task, interval, tag) => {
     const handle = { task };
     const repeater = () => {
@@ -35,7 +34,6 @@ repeat = (task, interval, tag) => {
     repeater();
 };
 
-
 clearByTag = (tag) => {
     while (tasksByTag[tag]) {
         const handle = tasksByTag[tag].handle;
@@ -45,7 +43,6 @@ clearByTag = (tag) => {
     }
     delete tasksByTag[tag];
 };
-
 
 sequence = (tasks, step, tag, onComplete) => {
     let index = 0;
@@ -75,5 +72,5 @@ tick = () => {
     currentTick++;
 };
 
-// This should be included.
+// This should be included. It's a garbage collector that runs every minute. 
 start(() => repeat(() => { for (const t in tasksByTag) { let s = { next: null }, l = s; for (let c = tasksByTag[t]; c; c = c.next)c.handle.executed || (l = l.next = c); l.next = null; s.next ? tasksByTag[t] = s.next : delete tasksByTag[t] } }, 1200, '_garbage_collector'))
