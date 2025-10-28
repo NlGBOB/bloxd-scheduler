@@ -36,10 +36,8 @@ clearByTag = (tag) => {
         let node = taskHeads[tick];
 
         while (node) {
-            if (node.tag === tag)
-                previous.next = node.next;
-            else
-                previous = node;
+            if (node.tag === tag) previous.next = node.next;
+            else previous = node;
             node = node.next;
         }
         taskHeads[tick] = sentinel.next;
@@ -58,6 +56,14 @@ sequence = (tasks, step, tag, onComplete) => {
         }
     }
     runNextJob();
+};
+
+waitUntil = (conditional, task, step, tag) => {
+    const waiter = () => {
+        if (conditional()) task();
+        else run(waiter, step, tag);
+    };
+    waiter();
 };
 
 tick = () => {
