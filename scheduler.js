@@ -40,17 +40,15 @@ clearByTag = (tag) => {
 };
 
 sequence = (tasks, step, tag, onComplete) => {
-    let index = 0;
-    const runNextJob = () => {
-        if (index < tasks.length) {
-            tasks[index]();
-            if (index + 1 < tasks.length) {
-                run(runNextJob, step, tag);
-                index++;
-            } else run(onComplete, 1, tag);
+    const runJobAtIndex = (currentIndex) => {
+        if (currentIndex >= tasks.length) {
+            if (onComplete) run(onComplete, 1, tag);
+            return;
         }
-    }
-    runNextJob();
+        tasks[currentIndex]();
+        run(() => runJobAtIndex(currentIndex + 1), step, tag);
+    };
+    runJobAtIndex(0);
 };
 
 waitUntil = (conditional, task, step, tag) => {
