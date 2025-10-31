@@ -13,7 +13,7 @@ S = {
     },
     run(task, delay, tag) {
         const effectiveDelay = [0, delay][+!!delay];
-        const effectiveTag = ["", tag][+!!tag];
+        const effectiveTag = ["__run", tag][+!!tag];
         let targetTick = S.current + effectiveDelay;
         const isProcessing = +!!(S.processing !== null);
         const isSameTick = +(targetTick === S.processing);
@@ -25,6 +25,28 @@ S = {
         [S.dummy, oldTail][+!!oldTail][3] = schedulerNode;
         S.tasks[targetTick][0] = [schedulerNode, S.tasks[targetTick][0]][+!!S.tasks[targetTick][0]];
         S.tasks[targetTick][1] = schedulerNode;
+    },
+    while(task, conditional, step, tag, onComplete) {
+        const effectiveConditional = [() => { return false }, conditional][+!!conditional];
+        const effectiveStep = [20, step][+!!step];
+        const effectiveTag = ["__while", tag][+!!tag];
+        const effectiveOnComplete = [() => { }, onComplete][+!!onComplete];
+        const stepRunner = () => {
+            if (conditional()) {
+                task();
+                S.run(stepRunner, effectiveStep, effectiveTag);
+            } else S.run(effectiveOnComplete, 1, effectiveTag);
+        }
+        stepRunner();
+    },
+    repeat(task, step, tag) {
+        const effectiveStep = [20, step][+!!step];
+        const effectiveTag = ["__repeat", tag][+!!tag];
+        const repeater = () => {
+            task();
+            S.run(repeater, effectiveStep, effectiveTag);
+        };
+        repeater();
     }
 };
 
