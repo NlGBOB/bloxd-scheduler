@@ -11,6 +11,23 @@ S = {
             S.dispatcher[+!!S.currentTickList[0]];
         }
     },
+    clearer: {
+        tagsToClear: null,
+        tickList: null,
+        prev: null,
+        current: null,
+        get 1() {
+            const next = S.clearer.current[3];
+            const shouldRemove = +!!S.clearer.tagsToClear.includes(S.clearer.current[1]);
+            const isTail = +(S.clearer.tickList[1] === S.clearer.current);
+            const removingTheTail = isTail & shouldRemove;
+            S.clearer.prev[3] = [S.clearer.prev[3], next][shouldRemove];
+            S.clearer.prev = [S.clearer.current, S.clearer.prev][shouldRemove];
+            S.clearer.tickList[1] = [S.clearer.tickList[1], S.clearer.prev][removingTheTail];
+            S.clearer.current = next;
+            S.clearer[+!!S.clearer.current];
+        }
+    },
     run(task, delay, tag) {
         const effectiveDelay = [0, delay][+!!delay];
         const effectiveTag = ["__run", tag][+!!tag];
@@ -32,7 +49,7 @@ S = {
         const effectiveTag = ["__while", tag][+!!tag];
         const effectiveOnComplete = [() => { }, onComplete][+!!onComplete];
         const stepRunner = () => {
-            if (conditional()) {
+            if (effectiveConditional()) {
                 task();
                 S.run(stepRunner, effectiveStep, effectiveTag);
             } else S.run(effectiveOnComplete, 1, effectiveTag);
@@ -47,6 +64,22 @@ S = {
             S.run(repeater, effectiveStep, effectiveTag);
         };
         repeater();
+    },
+    cancel(tags) {
+        S.clearer.tagsToClear = [tags, [tags]][+!Array.isArray(tags)];
+        Object.keys(S.tasks).forEach(tickKey => {
+            const tickList = S.tasks[tickKey];
+            const dummy = [null, '__dummy', null, tickList[0]];
+            S.clearer.tickList = tickList;
+            S.clearer.prev = dummy;
+            S.clearer.current = tickList[0];
+            S.clearer[+!!S.clearer.current];
+            tickList[0] = dummy[3];
+            const tailIsDummy = +(tickList[1] === dummy);
+            tickList[1] = [tickList[1], null][tailIsDummy];
+            const listIsEmpty = +!tickList[0];
+            ({ get 1() { delete S.tasks[tickKey]; } })[listIsEmpty];
+        });
     }
 };
 
