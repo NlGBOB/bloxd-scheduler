@@ -1,74 +1,161 @@
-taskHeads = {};
-currentTick = 0;
+S = {
+    tasks: {},
+    tags: {},
+    current: 0,
+    processing: null,
+    dummy: [],
+    currentTickList: null,
+    canceller: {
+        tagsToClear: [],
+        tagIndex: 0,
+        currentNode: null,
+        currentTag: null
+    },
+    dispatcher: {
+        get 1() {
+            const nodeToRun = S.currentTickList[0];
+            const tag = nodeToRun[1];
+            const tagList = S.tags[tag];
+            nodeToRun[0]();
+            const prevTag = nodeToRun[4];
+            const nextTag = nodeToRun[5];
+            [S.dummy, prevTag][+!!prevTag][5] = nextTag;
+            [S.dummy, nextTag][+!!nextTag][4] = prevTag;
+            const isTagHead = +(tagList[0] === nodeToRun);
+            tagList[0] = [tagList[0], nextTag][isTagHead];
+            const isTagTail = +(tagList[1] === nodeToRun);
+            tagList[1] = [tagList[1], prevTag][isTagTail];
+            const tagListIsEmpty = +!tagList[0];
+            ({ get 1() { delete S.tags[tag]; } })[tagListIsEmpty];
+            S.currentTickList[0] = nodeToRun[3];
+            S.dispatcher[+!!S.currentTickList[0]];
+        }
+    },
 
-run = (task, delay, tag) => {
-    const targetTick = currentTick + delay;
-    const schedulerNode = { task, tag, next: taskHeads[targetTick] };
-    taskHeads[targetTick] = schedulerNode;
-};
+    run(task, delay, tag) {
+        const effectiveDelay = [0, delay][+!!delay];
+        const effectiveTag = ["__run", tag][+!!tag];
+        let targetTick = S.current + effectiveDelay;
+        const isProcessing = +!!(S.processing !== null);
+        const isSameTick = +(targetTick === S.processing);
+        const isSchedulingForCurrentExecutingTick = isProcessing & isSameTick;
+        targetTick = targetTick + isSchedulingForCurrentExecutingTick;
+        const schedulerNode = [task, effectiveTag, null, null, null, null, targetTick];
+        S.tasks[targetTick] = [[null, null], S.tasks[targetTick]][+!!S.tasks[targetTick]];
+        const oldTickTail = S.tasks[targetTick][1];
+        schedulerNode[2] = oldTickTail;
+        [S.dummy, oldTickTail][+!!oldTickTail][3] = schedulerNode;
+        S.tasks[targetTick][0] = [schedulerNode, S.tasks[targetTick][0]][+!!S.tasks[targetTick][0]];
+        S.tasks[targetTick][1] = schedulerNode;
+        S.tags[effectiveTag] = [[null, null], S.tags[effectiveTag]][+!!S.tags[effectiveTag]];
+        const oldTagTail = S.tags[effectiveTag][1];
+        schedulerNode[4] = oldTagTail;
+        [S.dummy, oldTagTail][+!!oldTagTail][5] = schedulerNode;
+        S.tags[effectiveTag][0] = [schedulerNode, S.tags[effectiveTag][0]][+!!S.tags[effectiveTag][0]];
+        S.tags[effectiveTag][1] = schedulerNode;
+    },
 
-start = (task) => {
-    taskHeads[currentTick] = { task, next: taskHeads[currentTick] };
-};
+    sequence(tasks, step, tag, onComplete) {
+        const effectiveStep = [1, step][+!!step];
+        const effectiveTag = ["__sequence", tag][+!!tag];
+        const effectiveOnComplete = [() => { }, onComplete][+!!onComplete];
+        const hasTasks = +!!(tasks.length > 0);
+        ({
+            get 1() {
+                let currentIndex = 0;
+                const runner = () => {
+                    if (currentIndex < tasks.length) {
+                        tasks[currentIndex]();
+                        currentIndex++;
+                        S.run(runner, effectiveStep, effectiveTag);
+                    } else S.run(effectiveOnComplete, 1, effectiveTag)
+                };
+                S.run(runner, 0, effectiveTag);
+            }
+        })[hasTasks];
+    },
 
-runWhile = (task, conditional, step, tag, onComplete) => {
-    const stepRunner = () => {
-        if (conditional()) {
+    repeatWhile(task, step, tag, conditional, onComplete) {
+        ({
+            get 1() {
+                const effectiveStep = [20, step][+!!step];
+                const effectiveTag = ["__while", tag][+!!tag];
+                const effectiveOnComplete = [() => { }, onComplete][+!!onComplete];
+
+                const stepRunner = () => {
+                    if (conditional()) {
+                        task();
+                        S.run(stepRunner, effectiveStep, effectiveTag);
+                    } else S.run(effectiveOnComplete, 1, effectiveTag);
+                };
+                stepRunner();
+            }
+        })[+!!conditional];
+    },
+
+    repeat(task, step, tag) {
+        const effectiveStep = [20, step][+!!step];
+        const effectiveTag = ["__repeat", tag][+!!tag];
+        const repeater = () => {
             task();
-            run(stepRunner, step, tag);
-        } else run(onComplete, 1, tag);
+            S.run(repeater, effectiveStep, effectiveTag);
+        };
+        repeater();
+    },
+
+    cancel(tags) {
+        const remover = {
+            tagsToClear: [[], tags][+!!tags],
+            tagIndex: 0,
+            currentNode: null,
+            currentTag: null,
+
+            get 1() {
+                remover.currentTag = remover.tagsToClear[remover.tagIndex];
+                const tagList = S.tags[remover.currentTag];
+                if (tagList) {
+                    remover.currentNode = tagList[0];
+                    remover[2];
+                } else remover[3];
+            },
+            get 2() {
+                const nodeToCancel = remover.currentNode;
+                remover.currentNode = nodeToCancel[5];
+
+                const tick = nodeToCancel[6];
+                const tickList = S.tasks[tick];
+                const prevTick = nodeToCancel[2];
+                const nextTick = nodeToCancel[3];
+
+                [S.dummy, prevTick][+!!prevTick][3] = nextTick;
+                [S.dummy, nextTick][+!!nextTick][2] = prevTick;
+
+                const isTickHead = +(tickList[0] === nodeToCancel);
+                tickList[0] = [tickList[0], nextTick][isTickHead];
+                const isTickTail = +(tickList[1] === nodeToCancel);
+                tickList[1] = [tickList[1], prevTick][isTickTail];
+
+                const tickListIsEmpty = +!tickList[0];
+                ({ get 1() { delete S.tasks[tick]; } })[tickListIsEmpty];
+
+                const hasMoreNodes = +!!remover.currentNode;
+                remover[2 + !hasMoreNodes];
+            },
+            get 3() {
+                delete S.tags[remover.currentTag];
+                remover.tagIndex++;
+                remover[+(remover.tagIndex < remover.tagsToClear.length)];
+            },
+        };
+        remover[+!!(remover.tagsToClear.length > 0)];
     }
-    stepRunner();
-};
-
-repeat = (task, interval, tag) => {
-    const repeater = () => {
-        task();
-        run(repeater, interval, tag);
-    };
-    repeater();
-};
-
-clearByTag = (tag) => {
-    Object.keys(taskHeads).forEach(tick => {
-        let node = taskHeads[tick];
-        while (node) {
-            if (node.tag === tag) node.task = () => { };
-            node = node.next;
-        }
-    });
-};
-
-sequence = (tasks, step, tag, onComplete) => {
-    const runJobAtIndex = (currentIndex) => {
-        if (currentIndex >= tasks.length) {
-            if (onComplete) run(onComplete, 1, tag);
-            return;
-        }
-        tasks[currentIndex]();
-        run(() => runJobAtIndex(currentIndex + 1), step, tag);
-    };
-    runJobAtIndex(0);
-};
-
-waitUntil = (conditional, task, step, tag) => {
-    const waiter = () => {
-        if (conditional()) task();
-        else run(waiter, step, tag);
-    };
-    waiter();
-};
+}
 
 tick = () => {
-    const sentinel = { next: taskHeads[currentTick] };
-    const fifo = (parent, node) => {
-        if (!node) return;
-        fifo(node, node.next);
-        node.task();
-        node.task = () => { }
-        parent.next = null;
-    };
-    fifo(sentinel, sentinel.next);
-    delete taskHeads[currentTick];
-    currentTick++;
+    S.processing = S.current;
+    S.currentTickList = S.tasks[S.current];
+    S.dispatcher[+!!([S.dummy, S.currentTickList][+!!S.currentTickList][0])];
+    delete S.tasks[S.current];
+    S.current++;
+    S.processing = null;
 };
