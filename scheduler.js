@@ -11,6 +11,9 @@ S = {
             const tag = nodeToRun[1];
             const tagList = S.tags[tag];
             nodeToRun[0]();
+            const nextNodeInTick = nodeToRun[3];
+            S.currentTickList[0] = nextNodeInTick;
+            [S.dummy, nextNodeInTick][+!!nextNodeInTick][2] = null;
             const isTagListValid = +!!tagList;
             const effectiveTagList = [S.dummy, tagList][isTagListValid];
             const prevTag = nodeToRun[4];
@@ -23,9 +26,6 @@ S = {
             effectiveTagList[1] = [effectiveTagList[1], prevTag][isTagTail];
             const tagListIsEmpty = +!effectiveTagList[0];
             ({ get 1() { delete S.tags[tag]; } })[isTagListValid & tagListIsEmpty];
-            const nextNodeInTick = nodeToRun[3];
-            S.currentTickList[0] = nextNodeInTick;
-            [S.dummy, nextNodeInTick][+!!nextNodeInTick][2] = null;
             S.dispatcher[+!!S.currentTickList[0]];
         }
     },
@@ -85,7 +85,7 @@ S = {
         S.tags[effectiveTag][1] = schedulerNode;
     },
 
-    sequence(tasks, step, tag, onComplete) {
+    chain(tasks, step, tag, onComplete) {
         const effectiveStep = [1, step][+!!step];
         const effectiveTag = ["__sequence", tag][+!!tag];
         const effectiveOnComplete = [() => { }, onComplete][+!!onComplete];
