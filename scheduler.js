@@ -5,12 +5,7 @@ S = {
     processing: null,
     dummy: [],
     currentTickList: null,
-    canceller: {
-        tagsToClear: [],
-        tagIndex: 0,
-        currentNode: null,
-        currentTag: null
-    },
+
     dispatcher: {
         get 1() {
             const nodeToRun = S.currentTickList[0];
@@ -102,52 +97,34 @@ S = {
         };
         repeater();
     },
-
     cancel(tags) {
         const remover = {
             tagsToClear: [[], tags][+!!tags],
             tagIndex: 0,
             currentNode: null,
             currentTag: null,
-
             get 1() {
                 remover.currentTag = remover.tagsToClear[remover.tagIndex];
                 const tagList = S.tags[remover.currentTag];
-                if (tagList) {
-                    remover.currentNode = tagList[0];
-                    remover[2];
-                } else remover[3];
+                const isTagValid = ({ 0: 0, get 1() { return +!!tagList[0] } })[+!!tagList];
+                remover.currentNode = [null, tagList[0]][isTagValid];
+                remover[2]();
             },
             get 2() {
-                const nodeToCancel = remover.currentNode;
-                remover.currentNode = nodeToCancel[5];
-
-                const tick = nodeToCancel[6];
-                const tickList = S.tasks[tick];
-                const prevTick = nodeToCancel[2];
-                const nextTick = nodeToCancel[3];
-
-                [S.dummy, prevTick][+!!prevTick][3] = nextTick;
-                [S.dummy, nextTick][+!!nextTick][2] = prevTick;
-
-                const isTickHead = +(tickList[0] === nodeToCancel);
-                tickList[0] = [tickList[0], nextTick][isTickHead];
-                const isTickTail = +(tickList[1] === nodeToCancel);
-                tickList[1] = [tickList[1], prevTick][isTickTail];
-
-                const tickListIsEmpty = +!tickList[0];
-                ({ get 1() { delete S.tasks[tick]; } })[tickListIsEmpty];
-
-                const hasMoreNodes = +!!remover.currentNode;
-                remover[2 + !hasMoreNodes];
+                const isTagFinished = +!remover.currentNode;
+                ({ get 1() { remover[3](); return; } })[isTagFinished];
+                remover.currentNode[0] = () => { };
+                remover.currentNode = remover.currentNode[5];
+                remover[2]();
             },
             get 3() {
                 delete S.tags[remover.currentTag];
                 remover.tagIndex++;
-                remover[+(remover.tagIndex < remover.tagsToClear.length)];
-            },
+                const hasMoreTags = +(remover.tagIndex < remover.tagsToClear.length);
+                ({ get 1() { remover[1](); } })[hasMoreTags];
+            }
         };
-        remover[+!!(remover.tagsToClear.length > 0)];
+        ({ get 1() { remover[1](); } })[+(remover.tagsToClear.length > 0)];
     }
 }
 
