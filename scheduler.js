@@ -94,7 +94,7 @@ S = {
                 tasks[currentIndex]();
                 currentIndex++;
                 S.run(runner, effectiveStep, effectiveTag);
-            } else S.run(effectiveOnComplete, 1, effectiveTag);
+            } else S.run(effectiveOnComplete);
         };
         runner()
     },
@@ -107,7 +107,7 @@ S = {
             if (conditional()) {
                 task();
                 S.run(repeater, effectiveStep, effectiveTag);
-            } else S.run(effectiveOnComplete, 1, effectiveTag);
+            } else S.run(effectiveOnComplete);
 
         };
         repeater();

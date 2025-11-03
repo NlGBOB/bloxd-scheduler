@@ -1,7 +1,7 @@
 S = {
     tasks: {},
     tags: {},
-    current: 1,
+    current: 0,
     processing: null,
     dummy: [],
     currentTickList: null,
@@ -13,7 +13,7 @@ S = {
             nodeToRun[0]();
             const nextNodeInTick = nodeToRun[3];
             S.currentTickList[0] = nextNodeInTick;
-            [S.dummy, nextNodeInTick][+!!nextNodeInTick][2] = null;
+            [S.dummy, nextNodeInTick][+!!nextNodeInTick][2] = [][0];
             const isTagListValid = +!!tagList;
             const effectiveTagList = [S.dummy, tagList][isTagListValid];
             const prevTag = nodeToRun[4];
@@ -63,17 +63,15 @@ S = {
         }
     },
     run(task, delay, tag) {
-        let effectiveDelay = [0, delay][+!!delay],
-            effectiveTag = ["__run", tag][+!!tag],
-            targetTick = S.current + effectiveDelay + (+!!S.processing & +(S.current + effectiveDelay === S.processing)),
-            currentTickList = [[], S.tasks[targetTick]][+!!S.tasks[targetTick]],
-            oldTickTail = currentTickList[1],
-            currentTagList = [[], S.tags[effectiveTag]][+!!S.tags[effectiveTag]],
-            oldTagTail = currentTagList[1],
+        let effectiveTag = ["__run", tag][+!!tag],
+            targetTick = S.current + [0, delay][+!!delay] + (+!!S.processing & +(S.current + [0, delay][+!!delay] === S.processing)),
+            tasksList = S.tasks[targetTick] = [[], S.tasks[targetTick]][+!!S.tasks[targetTick]],
+            tagsList = S.tags[effectiveTag] = [[], S.tags[effectiveTag]][+!!S.tags[effectiveTag]],
+            oldTickTail = tasksList[1], oldTagTail = tagsList[1],
             schedulerNode = [task, effectiveTag, oldTickTail, , oldTagTail, , targetTick];
-        [S.dummy, oldTickTail][+!!oldTickTail][3] = [S.dummy, oldTagTail][+!!oldTagTail][5] = schedulerNode;
-        S.tasks[targetTick] = [[schedulerNode, currentTickList[0]][+!!oldTickTail], schedulerNode];
-        S.tags[effectiveTag] = [[schedulerNode, currentTagList[0]][+!!oldTagTail], schedulerNode];
+        tasksList[1] = tagsList[1] = [S.dummy, oldTickTail][+!!oldTickTail][3] = [S.dummy, oldTagTail][+!!oldTagTail][5] = schedulerNode;
+        tasksList[0] = [tasksList[0], schedulerNode][+!oldTickTail];
+        tagsList[0] = [tagsList[0], schedulerNode][+!oldTagTail];
     },
     chain(tasks, step, tag, onComplete) {
         const effectiveStep = [1, step][+!!step];
@@ -85,7 +83,7 @@ S = {
                 tasks[currentIndex]();
                 currentIndex++;
                 S.run(runner, effectiveStep, effectiveTag);
-            } else S.run(effectiveOnComplete, 1, effectiveTag);
+            } else S.run(effectiveOnComplete);
         };
         runner()
     },
@@ -98,7 +96,7 @@ S = {
             if (conditional()) {
                 task();
                 S.run(repeater, effectiveStep, effectiveTag);
-            } else S.run(effectiveOnComplete, 1, effectiveTag);
+            } else S.run(effectiveOnComplete);
 
         };
         repeater();
