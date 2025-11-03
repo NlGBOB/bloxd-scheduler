@@ -84,43 +84,33 @@ S = {
         S.tags[effectiveTag][0] = [schedulerNode, S.tags[effectiveTag][0]][+!!S.tags[effectiveTag][0]];
         S.tags[effectiveTag][1] = schedulerNode;
     },
-
     chain(tasks, step, tag, onComplete) {
         const effectiveStep = [1, step][+!!step];
-        const effectiveTag = ["__sequence", tag][+!!tag];
+        const effectiveTag = ["__chain", tag][+!!tag];
         const effectiveOnComplete = [() => { }, onComplete][+!!onComplete];
-        const hasTasks = +!!(tasks.length > 0);
-        ({
-            get 1() {
-                let currentIndex = 0;
-                const runner = () => {
-                    if (currentIndex < tasks.length) {
-                        tasks[currentIndex]();
-                        currentIndex++;
-                        S.run(runner, effectiveStep, effectiveTag);
-                    } else S.run(effectiveOnComplete, 1, effectiveTag)
-                };
-                S.run(runner, 0, effectiveTag);
-            }
-        })[hasTasks];
+        let currentIndex = 0;
+        const runner = () => {
+            if (currentIndex < tasks.length) {
+                tasks[currentIndex]();
+                currentIndex++;
+                S.run(runner, effectiveStep, effectiveTag);
+            } else S.run(effectiveOnComplete, 1, effectiveTag);
+        };
+        runner()
     },
 
     repeatWhile(task, step, tag, conditional, onComplete) {
-        ({
-            get 1() {
-                const effectiveStep = [20, step][+!!step];
-                const effectiveTag = ["__while", tag][+!!tag];
-                const effectiveOnComplete = [() => { }, onComplete][+!!onComplete];
+        const effectiveStep = [1, step][+!!step];
+        const effectiveTag = ["__repeatWhile", tag][+!!tag];
+        const effectiveOnComplete = [() => { }, onComplete][+!!onComplete];
+        const repeater = () => {
+            if (conditional()) {
+                task();
+                S.run(repeater, effectiveStep, effectiveTag);
+            } else S.run(effectiveOnComplete, 1, effectiveTag);
 
-                const stepRunner = () => {
-                    if (conditional()) {
-                        task();
-                        S.run(stepRunner, effectiveStep, effectiveTag);
-                    } else S.run(effectiveOnComplete, 1, effectiveTag);
-                };
-                stepRunner();
-            }
-        })[+!!conditional];
+        };
+        repeater();
     },
 
     repeat(task, step, tag) {
