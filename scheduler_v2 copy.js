@@ -3,9 +3,9 @@ S = {
     tasks: {},
     tags: {},
     current: 1,
-    processing: null,
+    processing: undefined,
     dummy: [],
-    currentTickList: null,
+    currentTickList: undefined,
     dispatcher: {
         get 1() {
             const nodeToRun = S.currentTickList[0];
@@ -25,14 +25,14 @@ S = {
         const effectiveDelay = [0, delay][+!!delay];
         const effectiveTag = ["_chmod_", tag][+!!tag];
         let targetTick = S.current + effectiveDelay;
-        const isProcessing = +!!(S.processing !== null);
+        const isProcessing = +!!S.processing;
         const isSameTick = +(targetTick === S.processing);
         const isSchedulingForCurrentExecutingTick = isProcessing & isSameTick;
         targetTick = targetTick + isSchedulingForCurrentExecutingTick;
-        S.tasks[targetTick] = [[null, null, 0], S.tasks[targetTick]][+!!S.tasks[targetTick]];
+        S.tasks[targetTick] = [[undefined, undefined, 0], S.tasks[targetTick]][+!!S.tasks[targetTick]];
         const tickTasks = S.tasks[targetTick];
         const taskIdWithinTick = tickTasks[2];
-        const schedulerNode = [task, effectiveTag, null, taskIdWithinTick];
+        const schedulerNode = [task, effectiveTag, undefined, taskIdWithinTick];
         const oldTickTail = tickTasks[1];
         [{}, oldTickTail][+!!oldTickTail][2] = schedulerNode;
         tickTasks[0] = [schedulerNode, tickTasks[0]][+!!tickTasks[0]];
@@ -41,7 +41,7 @@ S = {
         S.tags[effectiveTag] = [{}, S.tags[effectiveTag]][+!!S.tags[effectiveTag]];
         S.tags[effectiveTag][targetTick] = [{}, S.tags[effectiveTag][targetTick]][+!!S.tags[effectiveTag][targetTick]];
         S.tags[effectiveTag][targetTick][taskIdWithinTick] = 1;
-        ({ get 1() { task(); schedulerNode[0] = S.no_op; } })[+(effectiveDelay === 0)];
+        ({ get 1() { task(); schedulerNode[0] = S.no_op } })[+(effectiveDelay === 0)];
     }
 }
 
@@ -52,5 +52,5 @@ tick = () => {
     delete S.tasks[S.current];
     delete S.tags["_chmod_"]
     S.current++;
-    S.processing = null;
+    delete S.processing;
 };
