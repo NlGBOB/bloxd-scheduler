@@ -43,6 +43,5 @@ S = {
 tick = () => {
     S.currentTickList = S.tasks[S.current];
     S.dispatcher[+!!([S.dummy, S.currentTickList][+!!S.currentTickList][0])];
-    delete S.tasks[S.current];
-    S.current++;
+    delete S.tasks[S.current++];
 };
