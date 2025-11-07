@@ -2,6 +2,14 @@
 
 This task scheduler is engineered for maximum performance and control within the Bloxd engine. It's short, interruption-safe, and provides a powerful, low-level foundation for building complex game logic. By composing its two core functions, `S.run` and `S.del`, you can create sequences, conditional loops, and repeating tasks with minimal overhead.
 
+## Setup
+
+Paste this code at the top of your world code (455 characters):
+```js
+S={n:S=>S,q:{},t:{},c:1,o:0,a:0,d:{},D:{get 1(){let t=S.q[S.c],e=t[S.a++],c=S.t[e[1]],q=[S.d,c][+!!c];[e[0],S.n][+!!c&(e[3]<q[0]|e[3]==q[0]&e[2]<q[1])](),S.D[+(S.a<t.length)]}},run(t,e,c){let q=S.c+[1,e][+!!e],l=[t,["_default_",c][+!!c],S.o++,S.c],n=S.q[q]=[[],S.q[q]][+!!S.q[q]];n[n.length]=l,{get 1(){t(),l[0]=S.n}}[+(0==e)]},del(t){S.t[t]=[S.c,S.o++]}},tick=()=>{let t=S.q[S.c]=[[],S.q[S.c]][+!!S.q[S.c]];S.D[+(t.length>0)],delete S.q[S.c++],S.a=S.o=0}
+```
+If you want to see the full implementation code, you can find it in `temp` folder.
+
 ## API At a Glance
 
 The scheduler's API is intentionally minimal to ensure peak performance.
