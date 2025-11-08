@@ -1,14 +1,13 @@
-# The Bloxd Task Scheduler: High-Performance, Low-Level Control
+# Bloxd Task Scheduler (BTS): Interruption-Safe
 
-This task scheduler is engineered for maximum performance and control within the Bloxd engine. It's short, interruption-safe, and provides a powerful, low-level foundation for building complex game logic. By composing its two core functions, `S.run` and `S.del`, you can create sequences, conditional loops, and repeating tasks with minimal overhead.
+This task scheduler is engineered for maximum performance and controlIt's interruption-safe and provides a powerful, low-level foundation for building complex game logic. By composing its two core functions, `S.run` and `S.del`, you can create sequences, conditional loops, and repeating tasks with minimal overhead.
 
 ## Setup
 
-Paste this code at the top of your world code (455 characters):
+Paste this code at the top of your world code:
 ```js
-S={n:S=>S,q:{},t:{},c:1,o:0,a:0,d:{},D:{get 1(){let t=S.q[S.c],e=t[S.a++],c=S.t[e[1]],q=[S.d,c][+!!c];[e[0],S.n][+!!c&(e[3]<q[0]|e[3]==q[0]&e[2]<q[1])](),S.D[+(S.a<t.length)]}},run(t,e,c){let q=S.c+[1,e][+!!e],l=[t,["_default_",c][+!!c],S.o++,S.c],n=S.q[q]=[[],S.q[q]][+!!S.q[q]];n[n.length]=l,{get 1(){t(),l[0]=S.n}}[+(0==e)]},del(t){S.t[t]=[S.c,S.o++]}},tick=()=>{let t=S.q[S.c]=[[],S.q[S.c]][+!!S.q[S.c]];S.D[+(t.length>0)],delete S.q[S.c++],S.a=S.o=0}
+
 ```
-If you want to see the full implementation code, you can find it in `temp` folder.
 
 ## API At a Glance
 
@@ -17,32 +16,30 @@ The scheduler's API is intentionally minimal to ensure peak performance.
 | Function | Signature | Description |
 | :--- | :--- | :--- |
 | `run` | `S.run(task, delay, tag)` | Schedules a function to run once after a `delay` of ticks. |
-| `del` | `S.del(tag)` | "Neuters" (cancels) all pending tasks with a given `tag`. |
+| `invalidate` | `S.del(tag)` | Invalidates all pending tasks with a given `tag`, preventing them from running. |
 
 ---
 ## Core Concepts
 
-### Interruption Safety: Why Use `S.run(task, 0)`?
+### Guaranteed Execution: The Core of `S.run`
 In the Bloxd engine, code execution can be interrupted. If you call a function directly (`myFunction()`) and an interruption occurs, that function will not complete and will not be retried.
 
-**`S.run` solves this problem.** When you schedule a task with `S.run(myFunction, 0)`, you are telling the scheduler: "Run this immediately, but make sure it runs."
--   The scheduler will attempt to execute the task on the current tick.
--   If an interruption happens, the scheduler automatically retries the task on the very next tick.
--   Once the task executes successfully, it is removed and will not run again.
-
-This guarantees execution and is the safest way to initiate any important logic.
+**`S.run` solves this problem.** When you schedule a task with `S.run(myFunction)`, you are telling the scheduler: "Run this on the current tick, but make sure it runs."
+-   The scheduler atomically adds the task to the queue for the current tick. This scheduling operation itself is uninterruptible.
+-   During the `tick()` execution, your task is run in a controlled loop.
+-   This guarantees safe execution and is the best way to initiate any important logic. A task with a delay of `0` or no delay specified is queued for the *current* tick. A delay of `1` queues it for the *next* tick and so on.
 
 ### Unmatched Performance
 This scheduler is engineered to be as efficient as possible within the Bloxd engine.
 
-1.  **Zero-Cost Idle Ticks:** The scheduler is driven by a `tick()` function, called by the game ~20 times per second. The game engine unavoidably adds a base interrupt cost for calling any `tick` function. However, on ticks where no tasks are scheduled to run, this scheduler adds **zero additional interrupts** on top of that base cost. It is incredibly cheap when idle.
+1.  **Zero-Cost Idle Ticks:** The scheduler is driven by a `tick()` function, called by the game ~20 times per second. The game engine unavoidably adds a base interrupt cost for calling any `tick` function. However, on ticks where no tasks are scheduled to run, this scheduler adds **zero additional work** on top of that base cost. It is incredibly cheap when idle.
 
 2.  **Atomic Scheduling:** The primary scheduling function, `S.run()`, is nearly **atomic**. It simply adds a task to a map, an uninterruptible operation. The only cost is the function call itself.
 
-### The `del(tag)` Neutering System
-The `del` function is more than a simple cancellation. When you call `S.del(tag)`, it does not iterate through and delete tasks. Instead, it performs a single, atomic operation that effectively "neuters" them by replacing their function with an empty, do-nothing function.
+### The `del(tag)` System
+When you call `S.del(tag)`, it does not iterate through and delete tasks. Instead, it performs a single, atomic operation that effectively "invalidates" them. Any future task that tries to run with that tag will see that the tag is invalid and will simply do nothing.
 
-This is an **O(1) operation**. It doesn't matter if you have one or one thousand tasks scheduled with the tag `'my_tag'`; calling `S.del('my_tag')` is a single, instantaneous operation, making it extremely performant for cancelling large groups of events.
+This is an **O(1) operation**. It doesn't matter if you have one or one thousand tasks scheduled with the tag `'my_tag'`; calling `S.del('my_tag')` is a single, instantaneous operation, making it extremely efficient for cancelling multiple tag-sharing tasks.
 
 ---
 ## API Reference & Basic Examples
@@ -55,8 +52,8 @@ Schedules a task to be executed once.
 | Parameter | Type | Description |
 | :--- | :--- | :--- |
 | `task` | `Function` | The function to execute. **This function cannot take any arguments directly.** |
-| `delay` | `Number` | (Optional) The number of ticks to wait. `0` means execute immediately (but safely). Defaults to `1` if not provided. |
-| `tag` | `String` | (Optional) A tag for cancellation. If not provided, it defaults to `"_chmod_"` (yes). It is **highly recommended** to provide a specific tag for any task you might need to cancel. |
+| `delay` | `Number` | (Optional) The number of ticks to wait. `0` means execute on the current tick. Defaults to `0` if not provided. |
+| `tag` | `String` | (Optional) A tag for cancellation. If not provided, it defaults to `"_def_"`. It is **highly recommended** to provide a specific tag for any task you might need to cancel. |
 
 **Example: A Delayed Sound Effect**
 ```javascript
@@ -75,7 +72,7 @@ S.run(playSoundEffect, DELAY_TICKS, SOUND_TAG);
 ```
 
 ### `S.del(tag)`
-Immediately neuters all scheduled tasks associated with a given tag.
+Immediately invalidates all scheduled tasks associated with a given tag.
 
 **Example: Countdown Cancellation**
 ```javascript
@@ -129,7 +126,7 @@ This loop will spam the chat every second. To stop it, you can add a command to 
 ```javascript
 playerCommand = (playerId, command) => {
     if (command === "stop") {
-        S.del('simple_tick_loop'); // This is the important line. It could be called from anywhere, not from playerCommand necessarily
+        S.del('simple_tick_loop'); // This is the important line.
         api.broadcastMessage("Simple tick loop stopped.");
         return false;
     }
@@ -144,7 +141,7 @@ Use this for tasks that should run indefinitely at a fixed interval and contain 
 // This is a complete, copy-pastable example for your world code.
 const ANNOUNCEMENT_TAG = 'server_tip_announcer';
 
-// We safely (notice 0 delay) start the loop once when the world loads.
+// We safely start the loop once when the world loads.
 S.run(function broadcastServerTip() {
     // Define constants inside the function. They are set once and reused.
     const ANNOUNCEMENT_INTERVAL = 600; // 30 seconds
@@ -160,7 +157,7 @@ S.run(function broadcastServerTip() {
 
     // Reschedule this exact function to run again, creating the loop.
     S.run(broadcastServerTip, ANNOUNCEMENT_INTERVAL, ANNOUNCEMENT_TAG);
-}, 0, ANNOUNCEMENT_TAG);
+});
 ```
 
 ### Pattern 3: Self-Canceling Loop (A repeating task that stops itself)
@@ -182,7 +179,7 @@ const startCountdownForPlayer = (playerId) => {
             S.run(() => doCountdown(ticksLeft - 1), TICK_INTERVAL, COUNTDOWN_TAG);
         } else {
             api.sendMessage(playerId, "Lift off!");
-            // Notice that doesn't reschedule itself. Countdown finished.
+            // Notice it doesn't reschedule itself. The countdown is finished.
         }
     };
 
@@ -190,14 +187,10 @@ const startCountdownForPlayer = (playerId) => {
 };
 
 onPlayerJoin = (playerId) => {
-    // Safely schedule the countdown to start, protecting it from interruptions.
-    S.run(() => startCountdownForPlayer(playerId), 0);
+    // Safely schedule the countdown to start.
+    S.run(() => startCountdownForPlayer(playerId));
 };
 ```
-#### How to Test This:
-1.  Place this code in your World Code (F8).
-2.  Join the world (or leave and rejoin).
-3.  You will see a countdown from 5 to 1 in your chat, followed by "Lift off!".
 
 ### Pattern 4: Conditional Action Loop (`setInterval` with a condition)
 Use this for tasks that run forever but only perform an action if a condition is met.
@@ -223,8 +216,8 @@ const createHealingZone = (pos1, pos2, tag) => {
 };
 
 // Safely schedule the creation of the healing zones when the world loads.
-S.run(() => createHealingZone([10, 5, 10], [15, 10, 15], 'healing_zone_1'), 0);
-S.run(() => createHealingZone([-10, 5, -10], [-15, 10, -15], 'healing_zone_2'), 0);
+S.run(() => createHealingZone([10, 5, 10], [15, 10, 15], 'healing_zone_1'));
+S.run(() => createHealingZone([-10, 5, -10], [-15, 10, -15], 'healing_zone_2'));
 ```
 
 ### Pattern 5: Task Sequence (`chain` equivalent)
@@ -256,10 +249,6 @@ const runNextTeleportStep = (stepIndex) => {
 
 S.run(() => runNextTeleportStep(0), 0, TELEPORT_TAG);
 ```
-#### How to Test This:
-1.  Place this code in a code block and right-click it.
-2.  Observe the chat messages appearing in order every 1.5 seconds.
-3.  After the final message, you will be teleported 20 blocks into the air.
 
 ### Pattern 6: Task Sequence (Alternative Structure)
 This is another way to create a sequence, which can be useful when the delay between each step varies. Each function in the sequence is responsible for scheduling the next one.
@@ -269,7 +258,6 @@ This is another way to create a sequence, which can be useful when the delay bet
 // This is a complete, copy-pastable example for a code block.
 const STORY_TAG = 'story_sequence';
 
-// Define an array of functions, where each function schedules the next.
 const storySequence = [
     () => {
         api.sendMessage(myId, "A strange energy hums from the code block...");
@@ -289,12 +277,64 @@ const storySequence = [
 S.run(storySequence[0], 0, STORY_TAG);
 ```
 
+### Pattern 7: Conditional Loop with Self-Invalidation
+Use this for a repeating task that monitors a game state and stops itself permanently once a condition is met. This is perfect for game loops that should end.
+
+**Example: "First to 5 Kills" Game Announcer**
+```javascript
+// This is a complete, copy-pastable example for your world code.
+let scores = {};
+let gameIsOver = false;
+const KILLS_TO_WIN = 5;
+const ANNOUNCER_TAG = 'game_announcer';
+
+// This function runs every 5 seconds to announce the score.
+S.run(function gameAnnouncerLoop() {
+    const ANNOUNCE_INTERVAL = 100; // 5 seconds
+
+    // First, check if the game-over condition has been met.
+    if (gameIsOver) {
+        // If the game is over, invalidate the tag to stop this loop permanently.
+        return S.del(ANNOUNCER_TAG);
+    }
+
+    // The action: broadcast the current scores.
+    let scoreMessage = "Current Scores: ";
+    for (const id in scores) {
+        scoreMessage += `${api.getEntityName(id)}: ${scores[id]} | `;
+    }
+    api.broadcastMessage(scoreMessage);
+
+    // Reschedule this announcer to run again.
+    S.run(gameAnnouncerLoop, ANNOUNCE_INTERVAL, ANNOUNCER_TAG);
+}, 0, ANNOUNCER_TAG);
+
+// This part handles the game logic that changes the state.
+onPlayerKilledOtherPlayer = (attackingPlayer, killedPlayer) => {
+    if (gameIsOver) return; // Don't track kills after the game has ended.
+
+    scores[killerId] = (scores[killerId] || 0) + 1;
+    api.broadcastMessage(`${api.getEntityName(killerId)} now has ${scores[killerId]} kills!`);
+
+    if (scores[killerId] >= KILLS_TO_WIN) {
+        api.broadcastMessage(`${api.getEntityName(killerId)} wins the game!`, { color: "gold" });
+        gameIsOver = true; // Set the flag that the announcer loop will see.
+    }
+};
+```
+#### How to Test This:
+1.  Place this code in your World Code (F8).
+2.  Have at least two players join the server.
+3.  Every 5 seconds, a score update will be broadcast.
+4.  Have one player get 5 kills on another player.
+5.  Observe that a winner is announced, and the 5-second score announcements will stop.
+
 ---
 ## CRITICAL: Error Handling & Infinite Loops
 
-The scheduler is resilient but not psychic. If a task throws an error, it will fail. The scheduler, by design, will not discard the failing task and will attempt to run it again on the next tick, causing the game to get **stuck in an infinite loop**.
+The scheduler is resilient but not psychic. If a task throws an error, the `tick()` function will fail. The game engine, by design, will likely attempt to run `tick()` again on the very next opportunity, causing the game to get **stuck in an infinite error loop**.
 
-**The Solution: Write safe code.** For any operation that *might* fail, wrap it in a `try...catch` block.
+**The Solution: Write safe code.** For any operation that *might* fail (e.g., accessing a player that might have left), wrap it in a `try...catch` block.
 
 ### Emergency Failsafe: Player-Triggered Resets
 Writing safe code is always the best practice. However, if you are concerned that a bug might still cause an infinite loop, you can implement an emergency failsafe. This gives players a way to vote to reset the game if it becomes frozen. To prevent abuse, this example requires a majority of players (51% or more) to vote.
@@ -327,4 +367,4 @@ playerCommand = (playerId, command) => {
 };
 ```
 
-It's time to build your custom game.
+It's time to build your own custom game.
