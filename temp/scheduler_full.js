@@ -11,7 +11,7 @@ S = {
                 p = S.tags[node[1]];
             [node[0], o => o][+(node[2] < p)]();
             S.dispatcher[+(++S.activeIndex < tasks.length)];
-        },
+        }
     },
     run(task, delay, tag) {
         let tick = S.current - ~delay - 1,
@@ -19,7 +19,7 @@ S = {
             tasks = S.tasks[tick] = [[], S.tasks[tick]][+!!S.tasks[tick]];
         tasks[tasks.length] = node;
     },
-    del(tag) { S.tags[tag] = S.opCounter++ }
+    stop(tag) { S.tags[tag] = S.opCounter++ }
 };
 
 tick = () => {

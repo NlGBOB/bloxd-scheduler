@@ -1,7 +1,7 @@
 
 Paste this code at the top of your world code (132 characters):
 ```js
-S={t:{},g:{},c:0,o:0,a:0,d:{get 1(){let t=S.t[S.c],e=t[S.a],c=S.g[e[1]];[e[0],S=>S][+(e[2]<c)](),S.d[+(++S.a<t.length)]}},run(t,e,c){let d=S.c-~e-1,g=[t,["_def_",c][+!!c],S.o++],l=S.t[d]=[[],S.t[d]][+!!S.t[d]];l[l.length]=g},del(t){S.g[t]=S.o++}},tick=()=>{S.d[+!!S.t[S.c]],delete S.t[S.c++],S.a=0}
+S={t:{},g:{},c:0,o:0,a:0,d:{get 1(){let t=S.t[S.c],e=t[S.a],c=S.g[e[1]];[e[0],S=>S][+(e[2]<c)](),S.d[+(++S.a<t.length)]}},run(t,e,c){let d=S.c-~e-1,g=[t,["_def_",c][+!!c],S.o++],l=S.t[d]=[[],S.t[d]][+!!S.t[d]];l[l.length]=g},stop(t){S.g[t]=S.o++}},tick=()=>{S.d[+!!S.t[S.c]],delete S.t[S.c++],S.a=0}
 ```
 | Minified | Original      | Context                                      |
 | :------- | :------------ | :------------------------------------------- |
@@ -23,5 +23,5 @@ S={t:{},g:{},c:0,o:0,a:0,d:{get 1(){let t=S.t[S.c],e=t[S.a],c=S.g[e[1]];[e[0],S=
 | `d`      | `tick`        | Local variable inside the `run` function     |
 | `g`      | `node`        | Local variable inside the `run` function     |
 | `l`      | `tasks`       | Local variable inside the `run` function     |
-| **`del` function** | | |
-| `t`      | `tag`         | Parameter for the `del` function             |
+| **`stop` function** | | |
+| `t`      | `tag`         | Parameter for the `stop` function             |

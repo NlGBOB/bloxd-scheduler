@@ -1,12 +1,12 @@
 # Bloxd Task Scheduler (BTS): Interruption-Safe
 
-This task scheduler is engineered for maximum performance and controlIt's interruption-safe and provides a powerful, low-level foundation for building complex game logic. By composing its two core functions, `S.run` and `S.del`, you can create sequences, conditional loops, and repeating tasks with minimal overhead.
+This task scheduler is engineered for maximum performance and controlIt's interruption-safe and provides a powerful, low-level foundation for building complex game logic. By composing its two core functions, `S.run` and `S.stop`, you can create sequences, conditional loops, and repeating tasks with minimal overhead.
 
 ## Setup
 
-Paste this code at the top of your world code (132 characters):
+Paste this code at the top of your world code (133 characters):
 ```js
-S={t:{},g:{},c:0,o:0,a:0,d:{get 1(){let t=S.t[S.c],e=t[S.a],c=S.g[e[1]];[e[0],S=>S][+(e[2]<c)](),S.d[+(++S.a<t.length)]}},run(t,e,c){let d=S.c-~e-1,g=[t,["_def_",c][+!!c],S.o++],l=S.t[d]=[[],S.t[d]][+!!S.t[d]];l[l.length]=g},del(t){S.g[t]=S.o++}},tick=()=>{S.d[+!!S.t[S.c]],delete S.t[S.c++],S.a=0}
+S={t:{},g:{},c:0,o:0,a:0,d:{get 1(){let t=S.t[S.c],e=t[S.a],c=S.g[e[1]];[e[0],S=>S][+(e[2]<c)](),S.d[+(++S.a<t.length)]}},run(t,e,c){let d=S.c-~e-1,g=[t,["_def_",c][+!!c],S.o++],l=S.t[d]=[[],S.t[d]][+!!S.t[d]];l[l.length]=g},stop(t){S.g[t]=S.o++}},tick=()=>{S.d[+!!S.t[S.c]],delete S.t[S.c++],S.a=0}
 ```
 
 ## API At a Glance
@@ -16,7 +16,7 @@ The scheduler's API is intentionally minimal to ensure peak performance.
 | Function | Signature | Description |
 | :--- | :--- | :--- |
 | `run` | `S.run(task, delay, tag)` | Schedules a function to run once after a `delay` of ticks. |
-| `invalidate` | `S.del(tag)` | Invalidates all pending tasks with a given `tag`, preventing them from running. |
+| `invalidate` | `S.stop(tag)` | Invalidates all pending tasks with a given `tag`, preventing them from running. |
 
 ---
 ## Core Concepts
@@ -36,10 +36,10 @@ This scheduler is engineered to be as efficient as possible within the Bloxd eng
 
 2.  **Atomic Scheduling:** The primary scheduling function, `S.run()`, is nearly **atomic**. It simply adds a task to a map, an uninterruptible operation. The only cost is the function call itself.
 
-### The `del(tag)` System
-When you call `S.del(tag)`, it does not iterate through and delete tasks. Instead, it performs a single, atomic operation that effectively "invalidates" them. Any future task that tries to run with that tag will see that the tag is invalid and will simply do nothing.
+### The `stop(tag)` System
+When you call `S.stop(tag)`, it does not iterate through and delete tasks. Instead, it performs a single, atomic operation that effectively "invalidates" them. Any future task that tries to run with that tag will see that the tag is invalid and will simply do nothing.
 
-This is an **O(1) operation**. It doesn't matter if you have one or one thousand tasks scheduled with the tag `'my_tag'`; calling `S.del('my_tag')` is a single, instantaneous operation, making it extremely efficient for cancelling multiple tag-sharing tasks.
+This is an **O(1) operation**. It doesn't matter if you have one or one thousand tasks scheduled with the tag `'my_tag'`; calling `S.stop('my_tag')` is a single, instantaneous operation, making it extremely efficient for cancelling multiple tag-sharing tasks.
 
 ---
 ## API Reference & Basic Examples
@@ -71,7 +71,7 @@ api.log(`Sound will play in ${DELAY_TICKS / 20} seconds.`);
 S.run(playSoundEffect, DELAY_TICKS, SOUND_TAG);
 ```
 
-### `S.del(tag)`
+### `S.stop(tag)`
 Immediately invalidates all scheduled tasks associated with a given tag.
 
 **Example: Countdown Cancellation**
@@ -87,7 +87,7 @@ playerCommand = (playerId, command) => {
     }
     
     if (command === "cancel") {
-        S.del(COUNTDOWN_TAG); // this is the actual line that cancels the task/tasks
+        S.stop(COUNTDOWN_TAG); // this is the actual line that cancels the task/tasks
         api.broadcastMessage("Game start canceled.");
         return false; // Command handled
     }
@@ -104,7 +104,7 @@ playerCommand = (playerId, command) => {
 The key to creating loops and sequences is to have a function call `S.run` on itself to reschedule its own execution.
 
 ### Pattern 1: The Simplest Infinite Loop
-This is the most basic repeating task. It will run forever until it is explicitly stopped with `S.del(tag)`.
+This is the most basic repeating task. It will run forever until it is explicitly stopped with `S.stop(tag)`.
 
 **Example: A Repeating "Tick" Message**
 ```javascript
@@ -126,7 +126,7 @@ This loop will spam the chat every second. To stop it, you can add a command to 
 ```javascript
 playerCommand = (playerId, command) => {
     if (command === "stop") {
-        S.del('simple_tick_loop'); // This is the important line.
+        S.stop('simple_tick_loop'); // This is the important line.
         api.broadcastMessage("Simple tick loop stopped.");
         return false;
     }
@@ -295,7 +295,7 @@ S.run(function gameAnnouncerLoop() {
     // First, check if the game-over condition has been met.
     if (gameIsOver) {
         // If the game is over, invalidate the tag to stop this loop permanently.
-        return S.del(ANNOUNCER_TAG);
+        return S.stop(ANNOUNCER_TAG);
     }
 
     // The action: broadcast the current scores.
